@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "topic-classifier"
+version = "0.1.0"
+description = "Classifier for dnd rag system"
+authors = ["Timik232 <komolov.timurka@mail.ru>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.115.6"
+pydantic = "^2.10.4"
+uvicorn = "^0.34.0"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.10.0"
+pre-commit = "^4.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
