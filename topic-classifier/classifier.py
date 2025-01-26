@@ -77,3 +77,12 @@ def get_dnd_topic_class(user_message: UserMessage):
         return ClassificationResponse(related_to_dnd=False)
 
     return ClassificationResponse(related_to_dnd=True, topic_class=response_content)
+
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Server is running. Use "
+        "the /check_dnd_relation and /get_dnd_topic_clas endpoints "
+        "to interact."
+    }
