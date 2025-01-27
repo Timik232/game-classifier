@@ -7,3 +7,10 @@ services:
       - "8001:8001"
     environment:
       - PYTHONUNBUFFERED=1
+    networks:
+      - dnd
+
+networks:
+  dnd:
+    external: true
+    name: dnd
