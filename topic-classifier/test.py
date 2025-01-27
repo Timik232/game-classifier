@@ -1,5 +1,8 @@
 import requests
 
+check_dnd_relation = "http://localhost:8001/check_dnd_relation"
+dnd_topic_class = "http://localhost:8001/get_dnd_topic_class"
+
 
 def test_root():
     """
@@ -24,8 +27,7 @@ def test_another_app():
 
 def test_check_dnd_relation():
     payload = {"messages": "Я люблю ДНД!"}
-    response = requests.post("http://localhost:8001/check_dnd_relation", json=payload)
-    print(response)
+    response = requests.post(check_dnd_relation, json=payload)
     assert response.status_code == 200
     assert "related_to_dnd" in response.json()
     print("Check DND relation endpoint test passed.")
@@ -33,18 +35,18 @@ def test_check_dnd_relation():
 
 def test_get_dnd_topic_class():
     payload = {"messages": "Расскажи про класс воина"}
-    response = requests.post("http://localhost:8001/get_dnd_topic_class", json=payload)
+    response = requests.post(dnd_topic_class, json=payload)
     assert response.status_code == 200
     assert "topic_class" in response.json()
     assert response.json()["topic_class"] == "class"
-    print("Get DND topic class endpoint test passed.")
+    print("Class topic endpoint test passed.")
 
 
 def test_spell_case():
     payload = {
         "messages": "мой маг 5 уровня изучает заклинание огненный шар, расскажи про него"
     }
-    response = requests.post("http://localhost:8001/get_dnd_topic_class", json=payload)
+    response = requests.post(dnd_topic_class, json=payload)
     assert response.status_code == 200
     assert response.json()["topic_class"] == "spell"
     print("Spell topic test passed.")
@@ -52,7 +54,7 @@ def test_spell_case():
 
 def test_race_case():
     payload = {"messages": "дварф"}
-    response = requests.post("http://localhost:8001/get_dnd_topic_class", json=payload)
+    response = requests.post(dnd_topic_class, json=payload)
     assert response.status_code == 200
     assert response.json()["topic_class"] == "race"
     print("Race topic test passed.")
@@ -60,7 +62,7 @@ def test_race_case():
 
 def test_mechanics_case():
     payload = {"messages": "Как работает проверка ловкости?"}
-    response = requests.post("http://localhost:8001/get_dnd_topic_class", json=payload)
+    response = requests.post(dnd_topic_class, json=payload)
     assert response.status_code == 200
     assert response.json()["topic_class"] == "mechanics"
     print("Mechanic topic test passed.")
