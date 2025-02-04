@@ -30,8 +30,8 @@ def query_llm_api(prompt: str) -> dict:
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are an assistant"
-                    " specializing in classifying DND-related topics.",
+                    "content": "Вы являетесь ассистентом, "
+                    "специализирующимся на классификации тем, связанных с DND.",
                 },
                 {"role": "user", "content": prompt},
             ],
@@ -101,12 +101,26 @@ def check_dnd_relation(user_message: UserMessage):
     :return: boolean value if the message is related to DND
     """
     prompt = (
-        f"Относится ли следующее сообщение к теме DND? "
-        f"Ответьте только 'yes' или 'no': {user_message.messages}"
+        f"Есть сообщение пользователя. Думай по шагам и оцени, что пользователь "
+        f"хочет узнать, и относится ли его сообщение к теме DND? "
+        f"Категории, которые существуют: "
+        f"mechanics, class, spell, race, bestiary, item, feats, "
+        f"backgrounds, inventory, lore. "
+        f"Ответьте в формате:\n"
+        f"Почему я думаю, что пользователь спросил именно это:\n"
+        f"Пользователь хотел спросить:\n"
+        f"Вердикт:\n"
+        f"Вердикт может содержать только 'yes' или 'no'. yes если относится к dnd, "
+        f"no если не относится.\n Пользователь: {user_message.messages}"
     )
     llm_response = query_llm_api(prompt)
     response_content = check_answer_step_by_step(llm_response)
-    related_to_dnd = response_content == "yes"
+    if "yes" in response_content:
+        related_to_dnd = True
+    elif "no" in response_content:
+        related_to_dnd = False
+    else:
+        related_to_dnd = False
     return RelatedClassificationResponse(related_to_dnd=related_to_dnd)
 
 
