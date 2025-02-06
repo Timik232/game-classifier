@@ -2,6 +2,8 @@ import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from .utils import CLASS_PROMPT, RELATION_PROMPT
+
 app = FastAPI()
 
 # Configuration
@@ -100,19 +102,7 @@ def check_dnd_relation(user_message: UserMessage):
     :param user_message: http request
     :return: boolean value if the message is related to DND
     """
-    prompt = (
-        f"Есть сообщение пользователя. Думай по шагам и оцени, что пользователь "
-        f"хочет узнать, и относится ли его сообщение к теме DND? "
-        f"Категории, которые существуют: "
-        f"mechanics, class, spell, race, bestiary, item, feats, "
-        f"backgrounds, inventory, lore. "
-        f"Ответьте в формате:\n"
-        f"Почему я думаю, что пользователь спросил именно это:\n"
-        f"Пользователь хотел спросить:\n"
-        f"Вердикт:\n"
-        f"Вердикт может содержать только 'yes' или 'no'. yes если относится к dnd, "
-        f"no если не относится.\n Пользователь: {user_message.messages}"
-    )
+    prompt = RELATION_PROMPT + user_message.messages
     llm_response = query_llm_api(prompt)
     response_content = check_answer_step_by_step(llm_response)
     if "yes" in response_content:
@@ -131,13 +121,7 @@ def get_dnd_topic_class(user_message: UserMessage):
     :param user_message: http request
     :return: topic of the dnd
     """
-    prompt = (
-        f"Классифицируйте сообщение на русском языке в одну из английских категорий: "
-        f"mechanics, class, spell, race, bestiary, item, feats, "
-        f"backgrounds, inventory, lore. Ответ должен "
-        f"содержать только название категории и больше ничего. "
-        f"Сообщение: {user_message.messages}"
-    )
+    prompt = CLASS_PROMPT + user_message.messages
     llm_response = query_llm_api(prompt)
     response_content = check_answer_step_by_step(llm_response)
     dnd_class = check_classes(response_content)
