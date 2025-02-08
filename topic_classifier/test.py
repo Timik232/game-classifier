@@ -142,23 +142,125 @@ def test_mechanics_case():
 
 @log_test_start
 def test_barbarian_case():
-    """Test game mechanics classification"""
+    """Test class classification"""
     _test_topic_case("почему варвары такие злые?", "class")
-    logging.info("Mechanics classification working")
+    logging.info("Class classification working")
 
 
 @log_test_start
 def test_barbarian2_case():
-    """Test game mechanics classification"""
+    """Test class classification"""
     _test_topic_case("расскажи мне о характеристиках варвара", "class")
-    logging.info("Mechanics classification working")
+    logging.info("Class classification working")
 
 
 @log_test_start
 def test_unicorn_case():
-    """Test game mechanics classification"""
+    """Test bestiary classification"""
     _test_topic_case("сколько весит единорог?", "bestiary")
+    logging.info("Bestiary classification working")
+
+@log_test_start
+def test_checking_characteristic_case():
+    """Test game mechanics classification"""
+    _test_topic_case("Что такое 'проверка характеристики' и как она проводится?", "mechanics")
     logging.info("Mechanics classification working")
+
+@log_test_start
+def test_magic_item_case():
+    """Test magic item classification"""
+    _test_topic_case("Расскажи про кольцо оратора", "item")
+    logging.info("Magic item classification working")
+
+@log_test_start
+def test_magic_potion_case():
+    """Test magic item classification"""
+    _test_topic_case("зелье лечения", "item")
+    logging.info("Magic potion classification working")
+
+@log_test_start
+def test_magic_armor_case():
+    """Test magic armor classification"""
+    _test_topic_case("Расскажи про доспех антимагии", "item")
+    logging.info("Magic armor classification working")
+
+@log_test_start
+def test_spell_bless_case():
+    """Test spell classification"""
+    _test_topic_case("Расскажи про благословение", "spell")
+    logging.info("Spell classification working")
+
+@log_test_start
+def test_feats_case():
+    """test feats classification"""
+    _test_topic_case("расскажи про черту убийца магов", "feats")
+    logging.info("Feats classification working")
+
+@log_test_start
+def test_feats_without_metion_case():
+    """test feats classification"""
+    _test_topic_case("как работает атлетичный?", "feats")
+    logging.info("Feats classification working")
+
+@log_test_start
+def test_backgrounds_case():
+    """test backgrounds classification"""
+    _test_topic_case("расскажи про предысторию шарлатан", "backgrounds")
+    logging.info("Backgrounds classification working")
+
+@log_test_start
+def test_hard_backgrounds_case():
+    """test backgrounds classification"""
+    _test_topic_case("расскажи, в чём суть гильдейского ремесленника", "backgrounds")
+    logging.info("Backgrounds classification working")
+
+@log_test_start
+def test_inventory_case():
+    """test inventory classification"""
+    _test_topic_case("расскажи про безделушки", "inventory")
+    logging.info("Inventory classification working")
+
+@log_test_start
+def test_lore_case():
+    """test lore classification"""
+    _test_topic_case("какие есть боги в мире днд?", "lore")
+    logging.info("Lore classification working")
+
+@log_test_start
+def test_race2_case():
+    """test race classification"""
+    _test_topic_case("напиши про драконорождённого", "race")
+    logging.info("Race classification working")
+
+@log_test_start
+def test_race3_case():
+    """test race classification"""
+    _test_topic_case("что даёт персонажу выбор человека?", "race")
+    logging.info("Race classification working")
+
+@log_test_start
+def test_shovel_case():
+    """test inventory classification"""
+    _test_topic_case("сколько стоит лопата?", "inventory")
+    logging.info("Inventory shovel classification working")
+
+@log_test_start
+def test_jug_case():
+    """test inventory classification"""
+    _test_topic_case("сколько весит кувшин?", "inventory")
+    logging.info("Inventory jug classification working")
+
+@log_test_start
+def test_inventory_armor_case():
+    """test inventory classification"""
+    _test_topic_case("чешуйчатый доспех", "inventory")
+    logging.info("Inventory armor classification working")
+
+@log_test_start
+def test_item_armor_case():
+    """test item classification"""
+    _test_topic_case("адамантиновый доспех", "item")
+    logging.info("Item armor classification working")
 
 
 def full_test():
@@ -176,6 +278,23 @@ def full_test():
         test_barbarian_case,
         test_barbarian2_case,
         test_unicorn_case,
+        test_checking_characteristic_case,
+        test_magic_item_case,
+        test_magic_potion_case,
+        test_magic_armor_case,
+        test_spell_bless_case,
+        test_feats_case,
+        test_feats_without_metion_case,
+        test_backgrounds_case,
+        test_hard_backgrounds_case,
+        test_inventory_case,
+        test_lore_case,
+        test_race2_case,
+        test_race3_case,
+        test_shovel_case,
+        test_jug_case,
+        test_inventory_armor_case,
+        test_item_armor_case,
     ]
 
     results = {"passed": 0, "failed": 0, "errors": []}

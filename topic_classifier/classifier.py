@@ -105,6 +105,7 @@ def check_dnd_relation(user_message: UserMessage):
     prompt = RELATION_PROMPT + user_message.messages
     llm_response = query_llm_api(prompt)
     response_content = check_answer_step_by_step(llm_response)
+    print(response_content)
     if "yes" in response_content:
         related_to_dnd = True
     elif "no" in response_content:

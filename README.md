@@ -4,8 +4,8 @@
 For using this service, you need to run llm
 service with the same network as this service. Replace network in the
 docker-compose file for appropriate.
-Also it may be needed to change url to the service in the beginning of the
-`classifier.py` file.
+Also it may be needed to change url to the service in the 
+`utils.py` file.
 ```bash
 docker-compose build
 ```
