@@ -92,7 +92,10 @@ def check_classes(message: str) -> str:
         "inventory",
         "lore",
     ]
-    return message if message in valid_classes else "unrelated"
+    response = message if message in valid_classes else "unrelated"
+    if response == "item" or response == "inventory":
+        response = "item,inventory"
+    return response
 
 
 @app.post("/check_dnd_relation", response_model=RelatedClassificationResponse)
