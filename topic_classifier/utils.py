@@ -18,7 +18,7 @@ RELATION_PROMPT = (
 
 CLASS_PROMPT = (
     "Классифицируйте сообщение на русском языке в одну из английских категорий: "
-    "mechanics, class, spell, race, bestiary, item, feats, "
+    "mechanics, classes, spell, race, bestiary, item, feats, "
     "backgrounds, inventory, lore.\n "
     "Если в тексте вопрос, связанный с механиками игры, как что-то работает, "
     "то отнеси это к mechanics. \n"
@@ -29,8 +29,8 @@ CLASS_PROMPT = (
     "следопыт, чародей,"
     "алхимик, военачальник, егерь, звездочёт, магус, кровавый охотник, мистик, "
     "неупокоенная душа, савант, "
-    "хранитель рун или шаман, то отнеси это к class. Если ни одно из этих слов не "
-    "упоминается, то НЕ относи к class. \n "
+    "хранитель рун или шаман, то отнеси это к classes. Если ни одно из этих слов не "
+    "упоминается, то НЕ относи к classes. \n "
     "Если в тексте упоминается раса, например, дварф, человек или драконорождённый, "
     "то отнеси это к race. \n "
     "Если в тексте упоминается существо из днд (скелет, волк и другие), "
@@ -54,8 +54,11 @@ CLASS_PROMPT = (
 
 # Constants
 BASE_URL_MAIN = "http://localhost:8001"
+# LLM_API_URL = "http://localhost:1234/v1/chat/completions"
+LLM_API_URL = "http://fastapi-server:8000/v2/chat/completions"
 BASE_URL_LLM = "http://localhost:8000"
 CHECK_DND_RELATION = f"{BASE_URL_MAIN}/check_dnd_relation"
 DND_TOPIC_CLASS = f"{BASE_URL_MAIN}/get_dnd_topic_class"
 REQUEST_TIMEOUT = 20  # seconds
 TEST_DELAY = 6  # seconds between tests
+DATA_NAME = "chunk_questions.csv"

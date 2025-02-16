@@ -93,7 +93,7 @@ def test_get_dnd_topic_class():
     class_response = make_request(DND_TOPIC_CLASS, "POST", payload)
     assert "topic_class" in class_response.json(), "Missing topic classification"
     assert (
-        class_response.json()["topic_class"] == "class"
+        class_response.json()["topic_class"] == "classes"
     ), "Unexpected topic classification"
     logging.info("Class topic classification working")
 
@@ -143,14 +143,14 @@ def test_mechanics_case():
 @log_test_start
 def test_barbarian_case():
     """Test class classification"""
-    _test_topic_case("почему варвары такие злые?", "class")
+    _test_topic_case("почему варвары такие злые?", "classes")
     logging.info("Class classification working")
 
 
 @log_test_start
 def test_barbarian2_case():
     """Test class classification"""
-    _test_topic_case("расскажи мне о характеристиках варвара", "class")
+    _test_topic_case("расскажи мне о характеристиках варвара", "classes")
     logging.info("Class classification working")
 
 

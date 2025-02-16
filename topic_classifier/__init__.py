@@ -1,5 +1,6 @@
 from .logging_config import configure_logging
 from .test import full_test
+from .test_from_file import load_csv
 from .utils import (
     BASE_URL_LLM,
     BASE_URL_MAIN,
@@ -22,4 +23,5 @@ __all__ = [
     "TEST_DELAY",
     "configure_logging",
     "full_test",
+    "load_csv",
 ]

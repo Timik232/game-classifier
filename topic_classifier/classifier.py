@@ -2,12 +2,11 @@ import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from .utils import CLASS_PROMPT, RELATION_PROMPT
+from .utils import CLASS_PROMPT, LLM_API_URL, RELATION_PROMPT
 
 app = FastAPI()
 
 # Configuration
-LMM_API_URL = "http://fastapi-server:8000/v2/chat/completions"
 
 
 class UserMessage(BaseModel):
@@ -39,7 +38,7 @@ def query_llm_api(prompt: str) -> dict:
             ],
         }
 
-        response = requests.post(LMM_API_URL, json=payload)
+        response = requests.post(LLM_API_URL, json=payload)
         response.raise_for_status()
         if response.status_code == 200:
             return response.json()
