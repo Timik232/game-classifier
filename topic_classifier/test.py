@@ -1,8 +1,10 @@
 import logging
 import time
 
+import pandas as pd
 import requests
 
+from .test_from_file import load_data
 from .utils import (
     BASE_URL_LLM,
     BASE_URL_MAIN,
@@ -282,6 +284,29 @@ def test_item_armor_case():
     logging.info("Item armor classification working")
 
 
+@log_test_start
+def test_from_file(test_dataset: pd.DataFrame):
+    """
+    Process tests from a DataFrame with a delay, calculate overall accuracy,
+    and log results.
+    """
+    total_tests = len(test_dataset)
+    passed_tests = 0
+
+    for index, row in test_dataset.iterrows():
+        time.sleep(TEST_DELAY)
+        try:
+            _test_topic_case(row["question"], row["category"])
+            logging.info(f"Test {index} passed")
+            passed_tests += 1
+        except Exception as e:
+            logging.error(f"Test {index} failed: {str(e)}")
+
+    accuracy = (passed_tests / total_tests) * 100 if total_tests > 0 else 0
+    logging.info("Test from file working")
+    logging.info(f"Accuracy: {accuracy:.1f}%")
+
+
 def full_test():
     """Execute all tests with proper sequencing and reporting"""
     logging.info("Starting comprehensive test suite")
@@ -331,6 +356,9 @@ def full_test():
             logging.error(f"Unexpected error in {test.__name__}: {str(e)}")
             results["failed"] += 1
             results["errors"].append((test.__name__, str(e)))
+    train_dataset, test_dataset = load_data()
+    test_dataset = test_dataset.reset_index(drop=True)
+    test_from_file(test_dataset)
 
     logging.info("\n=== Test Summary ===")
     logging.info(f"Total tests: {len(tests)}")

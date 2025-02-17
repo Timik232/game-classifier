@@ -1,3 +1,6 @@
+"""
+Utils, constants, prompts
+"""
 # prompts
 RELATION_PROMPT = (
     "Есть сообщение пользователя. Думай по шагам и оцени, что пользователь "
@@ -59,5 +62,5 @@ BASE_URL_LLM = "http://localhost:8000"
 CHECK_DND_RELATION = f"{BASE_URL_MAIN}/check_dnd_relation"
 DND_TOPIC_CLASS = f"{BASE_URL_MAIN}/get_dnd_topic_class"
 REQUEST_TIMEOUT = 20  # seconds
-TEST_DELAY = 6  # seconds between tests
+TEST_DELAY = 10  # seconds between tests
 DATA_NAME = "chunk_questions.csv"
