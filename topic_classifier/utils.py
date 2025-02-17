@@ -3,7 +3,7 @@ RELATION_PROMPT = (
     "Есть сообщение пользователя. Думай по шагам и оцени, что пользователь "
     "хочет узнать, и относится ли его сообщение к теме DND? "
     "Категории, которые существуют: "
-    "mechanics, class, spell, race, bestiary, item, feats, "
+    "mechanics, classes, spell, race, bestiary, item, feats, "
     "backgrounds, inventory, lore. "
     "Упоминание любых предметов, например, безделушка, кольцо, напиток, инструмент, "
     "упоминание черт или характера, выбор, "
@@ -54,7 +54,6 @@ CLASS_PROMPT = (
 
 # Constants
 BASE_URL_MAIN = "http://localhost:8001"
-# LLM_API_URL = "http://localhost:1234/v1/chat/completions"
 LLM_API_URL = "http://fastapi-server:8000/v2/chat/completions"
 BASE_URL_LLM = "http://localhost:8000"
 CHECK_DND_RELATION = f"{BASE_URL_MAIN}/check_dnd_relation"

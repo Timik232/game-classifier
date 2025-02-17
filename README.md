@@ -21,7 +21,7 @@ For all endpoints, except test, http request should include one field: `messages
 - `/get_dnd_topic_class` — get topic of the message.
 List of the classes:
   - `mechanics`,
-  - `class`,
+  - `classes`,
   - `spell`,
   - `race`,
   - `bestiary`,

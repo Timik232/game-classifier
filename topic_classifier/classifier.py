@@ -81,7 +81,7 @@ def check_classes(message: str) -> str:
     """
     valid_classes = [
         "mechanics",
-        "class",
+        "classes",
         "spell",
         "race",
         "bestiary",
