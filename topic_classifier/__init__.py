@@ -1,4 +1,4 @@
-from .classifier_train import classifier_train
+from .classifier_train import classifier_train, test_trained_classifier
 from .logging_config import configure_logging
 from .test import full_test
 from .test_from_file import create_dataset, load_data
@@ -27,4 +27,5 @@ __all__ = [
     "create_dataset",
     "load_data",
     "classifier_train",
+    "test_trained_classifier",
 ]

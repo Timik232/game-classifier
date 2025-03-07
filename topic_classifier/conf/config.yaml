@@ -1,3 +1,8 @@
+defaults:
+  - _self_
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
 hydra:
    run:
      dir: .
@@ -14,6 +19,7 @@ data:
 
 model:
   num_labels: 2               # Number of labels for classification
+  model_name_or_path: "intfloat/multilingual-e5-large-instruct"
 
 tokenizer:
   max_length: 512             # Maximum sequence length
