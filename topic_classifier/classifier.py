@@ -1,8 +1,16 @@
+import re
+
 import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from .utils import CLASS_PROMPT, LLM_API_URL, RELATION_PROMPT
+
+
+def remove_think_tags(message):
+    message = re.sub(r"<think>.*</think>", "", message, flags=re.DOTALL)
+    return message
+
 
 app = FastAPI()
 
@@ -91,8 +99,9 @@ def check_classes(message: str) -> str:
         "inventory",
         "lore",
     ]
-    response = message if message in valid_classes else "unrelated"
-    if response == "item" or response == "inventory":
+    output_message = remove_think_tags(message).strip().lower()
+    response = output_message if output_message in valid_classes else "unrelated"
+    if "item" in response or "inventory" in response:
         response = "item,inventory"
     return response
 
@@ -107,7 +116,7 @@ def check_dnd_relation(user_message: UserMessage):
     prompt = RELATION_PROMPT + user_message.messages
     llm_response = query_llm_api(prompt)
     response_content = check_answer_step_by_step(llm_response)
-    print(response_content)
+    response_content = remove_think_tags(response_content)
     if "yes" in response_content:
         related_to_dnd = True
     elif "no" in response_content:
