@@ -2,6 +2,7 @@ import json
 import logging
 import os
 
+import requests
 import torch
 from datasets import Dataset
 from omegaconf import DictConfig, OmegaConf
@@ -18,6 +19,7 @@ from transformers import (
 import wandb
 
 from .private_api import WANDB_API
+from .utils import CHECK_DND_RELATION
 
 
 class OneCycleTrainer(Trainer):
@@ -91,6 +93,57 @@ def final_test_model(
 
     logging.info(f"Accuracy: {accuracy:.4f}")
     logging.info(f"F1 Score: {f1:.4f}")
+
+    return {"accuracy": accuracy, "f1": f1}
+
+
+def test_llm_classifier(json_path: str):
+    """
+    Loads the dataset from a JSON file, sends each text to the LLM classifier endpoint,
+    and calculates accuracy and weighted F1 score.
+
+    The dataset is expected to be a JSON array of lists, e.g.:
+      [
+         ["text sample 1", 1],
+         ["text sample 2", 0],
+         ...
+      ]
+
+    The endpoint should accept a JSON payload: {"text": "..."}, and return a JSON response
+    with a key "prediction" (e.g., {"prediction": 1}).
+    """
+    # Load data from JSON file
+    with open(json_path, "r", encoding="utf-8") as f:
+        raw_data = json.load(f)
+    # Convert to list of dicts
+    data = [{"text": item[0], "label": item[1]} for item in raw_data]
+
+    all_predictions = []
+    all_labels = []
+
+    for sample in data:
+        text = sample["text"]
+        true_label = sample["label"]
+        payload = {"text": text}
+        try:
+            response = requests.post(CHECK_DND_RELATION, json=payload)
+            response.raise_for_status()
+            result = response.json()
+            # Expecting a response like {"prediction": <predicted_label>}
+            pred = result.get("prediction")
+            if pred is None:
+                logging.error(f"No prediction found in response for text: {text}")
+                continue
+            all_predictions.append(pred)
+            all_labels.append(true_label)
+        except Exception as e:
+            logging.error(f"Error processing sample '{text}': {e}")
+
+    accuracy = accuracy_score(all_labels, all_predictions)
+    f1 = f1_score(all_labels, all_predictions, average="weighted")
+
+    logging.info(f"LLM Classifier Accuracy: {accuracy:.4f}")
+    logging.info(f"LLM Classifier F1: {f1:.4f}")
 
     return {"accuracy": accuracy, "f1": f1}
 
