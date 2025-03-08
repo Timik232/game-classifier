@@ -99,23 +99,23 @@ def final_test_model(
 
 def test_llm_classifier(json_path: str):
     """
-    Loads the dataset from a JSON file, sends each text to the LLM classifier endpoint,
-    and calculates accuracy and weighted F1 score.
+    Loads the dataset from a JSON file,
+    sends each text sample to the LLM classifier endpoint using the payload
+    {"messages": "<text>"},  and calculates
+    accuracy and weighted F1 score.
 
     The dataset is expected to be a JSON array of lists, e.g.:
       [
-         ["text sample 1", 1],
-         ["text sample 2", 0],
+         ["Sample text 1", 1],
+         ["Sample text 2", 0],
          ...
       ]
 
-    The endpoint should accept a JSON payload: {"text": "..."}, and return a JSON response
-    with a key "prediction" (e.g., {"prediction": 1}).
+    The endpoint should accept a JSON payload: {"messages": "<text>"}
     """
-    # Load data from JSON file
     with open(json_path, "r", encoding="utf-8") as f:
         raw_data = json.load(f)
-    # Convert to list of dicts
+
     data = [{"text": item[0], "label": item[1]} for item in raw_data]
 
     all_predictions = []
@@ -124,16 +124,25 @@ def test_llm_classifier(json_path: str):
     for sample in data:
         text = sample["text"]
         true_label = sample["label"]
-        payload = {"text": text}
+        payload = {"messages": text}
         try:
             response = requests.post(CHECK_DND_RELATION, json=payload)
             response.raise_for_status()
             result = response.json()
-            # Expecting a response like {"prediction": <predicted_label>}
-            pred = result.get("prediction")
-            if pred is None:
+            pred_text = result.get("related_to_dnd")
+            if pred_text is None:
                 logging.error(f"No prediction found in response for text: {text}")
                 continue
+            if pred_text:
+                pred = 1
+            elif not pred_text:
+                pred = 0
+            else:
+                logging.error(
+                    f"Unexpected prediction value '{pred_text}' for text: {text}"
+                )
+                continue
+
             all_predictions.append(pred)
             all_labels.append(true_label)
         except Exception as e:
