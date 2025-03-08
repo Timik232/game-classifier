@@ -167,12 +167,13 @@ def classifier_train(cfg: DictConfig):
         eval_steps=cfg.training.eval_steps
         if cfg.training.evaluation_strategy == "steps"
         else None,
+        lr_scheduler_type="cosine",
         logging_dir=cfg.training.logging_dir,
         report_to="wandb",
         run_name=cfg.training.run_name,
     )
 
-    trainer = OneCycleTrainer(
+    trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,
