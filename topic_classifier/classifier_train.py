@@ -207,9 +207,9 @@ def classifier_train(cfg: DictConfig):
     wandb.finish()
 
 
-def test_trained_classifier(cfg: DictConfig):
+def test_trained_classifier(cfg: DictConfig, steps=720):
     model = AutoModelForSequenceClassification.from_pretrained(
-        os.path.join(cfg.training.output_dir, "checkpoint-567")
+        os.path.join(cfg.training.output_dir, f"checkpoint-{steps}")
     )
     tokenizer = AutoTokenizer.from_pretrained(
         os.path.join(cfg.training.output_dir, "tokenizer")
