@@ -247,7 +247,7 @@ def classifier_train(cfg: DictConfig):
     results = trainer.evaluate()
     logging.info("Evaluation Results: %s", results)
     trainer.save_model(cfg.training.output_dir)
-    tokenizer.save_pretrained(os.path.join(cfg.training.output_dir), "tokenizer")
+    tokenizer.save_pretrained(os.path.join(cfg.training.output_dir, "tokenizer"))
 
     final_test_model(model, cfg.data.data_path, tokenizer, cfg.tokenizer.max_length)
 
