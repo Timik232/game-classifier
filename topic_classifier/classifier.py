@@ -8,7 +8,7 @@ from .utils import CLASS_PROMPT, LLM_API_URL, RELATION_PROMPT
 
 
 def remove_think_tags(message):
-    message = re.sub(r"<think>.*</think>", "", message, flags=re.DOTALL)
+    message = re.sub(r"<think>.*?</think>", "", message, flags=re.DOTALL)
     return message
 
 

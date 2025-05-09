@@ -29,6 +29,7 @@ def downgrade_onnx_versions(
         print(f"Model successfully saved to {output_path}")
     except onnx.checker.ValidationError as e:
         print(f"Validation failed: {e}")
+        raise
 
 
 def argparser():

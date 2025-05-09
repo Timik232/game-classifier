@@ -4,7 +4,6 @@ import os
 import time
 from typing import Dict, List, Optional
 
-import onnx
 import openai
 import pandas as pd
 import requests
@@ -24,6 +23,7 @@ from transformers import (
 
 import wandb
 
+from .onnx_convert import downgrade_onnx_versions
 from .private_api import WANDB_API
 from .utils import CHECK_DND_RELATION, LMSTUDIO_URL, MODEL_NAME
 
@@ -407,7 +407,7 @@ def classifier_train(cfg: DictConfig):
         per_device_train_batch_size=cfg.training.per_device_train_batch_size,
         per_device_eval_batch_size=cfg.training.per_device_eval_batch_size,
         gradient_accumulation_steps=cfg.training.gradient_accumulation_steps,
-        # eval_strategy=cfg.training.evaluation_strategy,
+        evaluation_strategy=cfg.training.evaluation_strategy,
         eval_steps=cfg.training.eval_steps
         if cfg.training.evaluation_strategy == "steps"
         else None,
@@ -466,14 +466,9 @@ def classifier_train(cfg: DictConfig):
     )
 
     downgraded = os.path.join(cfg.training.output_dir, "model_downgraded.onnx")
-    model_onnx = onnx.load(onnx_path)
-    model_onnx.ir_version = cfg.onnx.target_ir_version
-    for imp in model_onnx.opset_import:
-        if imp.domain in ("", "ai.onnx"):
-            imp.version = cfg.onnx.target_opset_version
-    onnx.checker.check_model(model_onnx)
-    onnx.save(model_onnx, downgraded)
-    logging.info(f"Downgraded ONNX saved to {downgraded}")
+    downgrade_onnx_versions(
+        onnx_path, downgraded, cfg.onnx.target_ir_version, cfg.onnx.target_opset_version
+    )
 
     logging.info(f"ONNX model exported to {onnx_path}")
 

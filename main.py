@@ -1,7 +1,7 @@
 import logging
 
 import hydra
-from omegaconf import omegaconf
+from omegaconf import DictConfig
 
 from topic_classifier import (
     classifier_train,
@@ -13,7 +13,7 @@ from topic_classifier import (
 )
 
 
-def prepate_data(cfg: omegaconf.DictConfig) -> None:
+def prepate_data(cfg: DictConfig) -> None:
     clean_tweets(cfg.data.dir, cfg.data.file_name)
     dataset = load_dataset(cfg.data.dir, "cleaned_tweets.csv")
     translate_dataset(dataset)
@@ -22,7 +22,7 @@ def prepate_data(cfg: omegaconf.DictConfig) -> None:
 @hydra.main(
     version_base="1.1", config_path="topic_classifier/conf", config_name="config"
 )
-def main(cfg: omegaconf.DictConfig):
+def main(cfg: DictConfig):
     classifier_train(cfg)
 
 

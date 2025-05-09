@@ -15,14 +15,14 @@ def create_dataset() -> None:
     data_dir = os.path.join("data")
     data_path = os.path.join(data_dir, DATA_NAME)
     if not os.path.exists(data_dir):
-        raise FileNotFoundError(f"Дирректория '{data_dir}' не найдена.")
+        raise FileNotFoundError(f"Директория '{data_dir}' не найдена.")
     if not os.path.isfile(data_path):
         raise FileNotFoundError(f"Файл '{data_path}' не найден.")
 
     try:
         df = pd.read_csv(data_path)
     except Exception as e:
-        raise ValueError(f"Произошла ошибка при чтении файла: {e}")
+        raise ValueError(f"Произошла ошибка при чтении файла: {e}") from e
 
     dataset = set()
     for i in range(len(df)):
@@ -32,7 +32,8 @@ def create_dataset() -> None:
             question = question.strip("}{").strip()
             dataset.add((question, category))
 
-    with open(os.path.join("data", "dataset.json"), "w", encoding="utf-8") as f:
+    data = os.path.join("data", "dataset.json")
+    with open(data, "w", encoding="utf-8") as f:
         json.dump(list(dataset), f, ensure_ascii=False, indent=4)
 
     logging.info("Data: " + str(len(df)))
@@ -45,7 +46,8 @@ def load_data(test_size=0.2) -> tuple[pd.DataFrame, pd.DataFrame]:
     :param test_size: size of test dataset
     :return: train and test datasets respectively
     """
-    with open(os.path.join("data", "dataset.json"), "r", encoding="utf-8") as f:
+    data = os.path.join("data", "dataset.json")
+    with open(data, "r", encoding="utf-8") as f:
         dataset = json.load(f)
     columns = ["question", "category"]
     df_dataset = pd.DataFrame(dataset, columns=columns)

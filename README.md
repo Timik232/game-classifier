@@ -14,7 +14,7 @@ docker-compose build
 docker-compose up
 ```
 # Endpoints
-For first mentioned endpoint I will write path with the assumption that the server is running on localhost:8000,
+For first mentioned endpoint I will write path with the assumption that the server is running on localhost:8001,
 because it's base port for docker-compose. Then I will write only the path to the endpoint.
 For all endpoints, except test, http request should include one field: `messages: str`
 - `http://localhost:8001/` — connection test
@@ -30,5 +30,24 @@ List of the classes:
   - `backgrounds`,
   - `lore`.
 
+```
+curl -X POST http://localhost:8001/get_dnd_topic_class \
+  -H "Content-Type: application/json" \
+  -d '{"messages": "Tell me about orc societies."}'
+```
+Result
+```json
+{"topic_class": "classes"}
+```
+
 - `/check_dnd_relation` — check if the message is related to the dnd subject. It return `yes` if related and `no`
 if not.
+```
+curl -X POST http://localhost:8001/check_dnd_relation \
+  -H "Content-Type: application/json" \
+  -d '{"messages": "Tell me about orc societies."}'
+```
+Return
+```json
+{"related_to_dnd": true}
+```
