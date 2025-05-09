@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import time
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import openai
 import pandas as pd
@@ -61,14 +61,16 @@ def tokenize_function(
 
 def final_test_model(
     model: torch.nn.Module,
-    json_path: str,
+    data_path: str,
     tokenizer,  # AutoTokenizer or similar
     max_length: int,
     batch_size: int = 16,
 ):
-    with open(json_path, "r", encoding="utf-8") as f:
-        raw_data = json.load(f)
-    data = [{"text": item[0], "label": item[1]} for item in raw_data]
+    """
+    Evaluate the model on a dataset.
+    """
+    file_extension = os.path.splitext(data_path)[1].lower()
+    data = load_training_dataset(data_path, file_extension)
     dataset = Dataset.from_list(data)
 
     dataset = dataset.map(
@@ -320,6 +322,25 @@ def load_dataset(data_dir: str, file_name: str) -> DatasetDict:
     return dataset
 
 
+def load_training_dataset(file_path: str, file_extension: str) -> List[Dict[str, Any]]:
+    data = []
+    if file_extension == ".json":
+        with open(file_path, "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
+            data = [{"text": item[0], "label": item[1]} for item in raw_data]
+    elif file_extension == ".csv":
+        raw_data = pd.read_csv(file_path, encoding="utf-8")
+        data = [
+            {"text": row["tweet_cleaned"], "label": row["class"]}
+            for _, row in raw_data.iterrows()
+        ]
+    else:
+        raise ValueError(
+            f"Unsupported file format: {file_extension}. Only .json and .csv are supported"
+        )
+    return data
+
+
 def classifier_train(cfg: DictConfig):
     """
     Train a sequence classification model
@@ -336,21 +357,7 @@ def classifier_train(cfg: DictConfig):
 
     file_path = cfg.data.data_path
     file_extension = os.path.splitext(file_path)[1].lower()
-
-    if file_extension == ".json":
-        with open(file_path, "r", encoding="utf-8") as f:
-            raw_data = json.load(f)
-            data = [{"text": item[0], "label": item[1]} for item in raw_data]
-    elif file_extension == ".csv":
-        raw_data = pd.read_csv(file_path, encoding="utf-8")
-        data = [
-            {"text": row["tweet_cleaned"], "label": row["class"]}
-            for _, row in raw_data.iterrows()
-        ]
-    else:
-        raise ValueError(
-            f"Unsupported file format: {file_extension}. Only .json and .csv are supported"
-        )
+    data = load_training_dataset(file_path, file_extension)
 
     full_dataset = Dataset.from_list(data)
     class_proportions = sum(full_dataset["label"]) / len(full_dataset["label"])
@@ -429,11 +436,9 @@ def classifier_train(cfg: DictConfig):
     logging.info("Training Time: %s", time.time() - time_start)
     results = trainer.evaluate()
     logging.info("Evaluation Results: %s", results)
+    wandb.finish()
     trainer.save_model(cfg.training.output_dir)
     tokenizer.save_pretrained(os.path.join(cfg.training.output_dir, "tokenizer"))
-
-    final_test_model(model, cfg.data.data_path, tokenizer, cfg.tokenizer.max_length)
-
     test_text = "Пример текста для оценки"
     inputs = tokenizer(
         test_text,
@@ -472,7 +477,7 @@ def classifier_train(cfg: DictConfig):
 
     logging.info(f"ONNX model exported to {onnx_path}")
 
-    wandb.finish()
+    final_test_model(model, cfg.data.data_path, tokenizer, cfg.tokenizer.max_length)
 
 
 def test_trained_classifier(cfg: DictConfig, steps=720):
