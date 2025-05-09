@@ -1,12 +1,18 @@
 import json
 import logging
 import os
+import time
+from typing import Dict, List, Optional
 
+import onnx
+import openai
+import pandas as pd
 import requests
 import torch
-from datasets import Dataset
+from datasets import Dataset, DatasetDict
 from omegaconf import DictConfig, OmegaConf
 from sklearn.metrics import accuracy_score, f1_score
+from tenacity import retry, stop_after_attempt, wait_exponential
 from torch.optim.lr_scheduler import OneCycleLR
 from torch.utils.data import DataLoader
 from transformers import (
@@ -19,7 +25,9 @@ from transformers import (
 import wandb
 
 from .private_api import WANDB_API
-from .utils import CHECK_DND_RELATION
+from .utils import CHECK_DND_RELATION, LMSTUDIO_URL, MODEL_NAME
+
+client = openai.OpenAI(base_url=LMSTUDIO_URL, api_key="<KEY>")
 
 
 class OneCycleTrainer(Trainer):
@@ -39,7 +47,10 @@ class OneCycleTrainer(Trainer):
 
 def tokenize_function(
     example: dict, tokenizer: torch.nn.Module | AutoTokenizer, max_length: int
-):
+) -> Dict:
+    """
+    Tokenize text for classification.
+    """
     return tokenizer(
         example["text"],
         truncation=True,
@@ -157,7 +168,162 @@ def test_llm_classifier(json_path: str):
     return {"accuracy": accuracy, "f1": f1}
 
 
+@retry(wait=wait_exponential(min=1, max=60), stop=stop_after_attempt(6))
+def call_translate(prompt: str) -> str:
+    """
+    Call OpenAI ChatCompletion API to translate a given prompt.
+
+    Args:
+        prompt (str): The text prompt containing content to translate.
+
+    Returns:
+        str: The translated text returned by the API.
+    """
+    response = client.chat.completions.create(
+        model=MODEL_NAME,
+        messages=[
+            {"role": "system", "content": "You are a helpful translation assistant."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0,
+    )
+    return response.choices[0].message.content.strip()
+
+
+def batch_translate(
+    texts: List[str], target_lang: str = "ru", batch_size: int = 10
+) -> List[str]:
+    """
+    Translate a list of texts into the target language in batches.
+
+    Args:
+        texts (List[str]): List of original texts to translate.
+        target_lang (str, optional): Target language code (e.g., 'ru'). Defaults to "ru".
+        batch_size (int, optional): Number of texts per batch. Defaults to 50.
+
+    Raises:
+        ValueError: If the number of translated lines does not match the batch size.
+
+    Returns:
+        List[str]: List of translated texts in the same order.
+    """
+    results: List[str] = []
+    delimiter = ";"
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i : i + batch_size]
+        prompt = (
+            f"Translate the following texts into {target_lang}, "
+            f"Answer should contain only translated texts, "
+            f"no additional information, preserving order and separated by '{delimiter}'"
+            + "\n".join(batch)
+        )
+        translated = call_translate(prompt)
+        print(translated)
+        segments = [seg.strip() for seg in translated.split(delimiter)]
+        if len(segments) != len(batch):
+            raise ValueError(
+                f"Expected {len(batch)} segments but got {len(segments)} translation results"
+            )
+        results.extend(segments)
+    return results
+
+
+def translate_dataset(
+    dataset: DatasetDict,
+    target_lang: str = "ru",
+    batch_size: int = 10,
+    splits: Optional[List[str]] = None,
+) -> None:
+    """
+    Translate the 'tweet_cleaned' column in each split of a DatasetDict and save to CSV.
+
+    Args:
+        dataset (DatasetDict):
+            A HuggingFace DatasetDict containing splits.
+        target_lang (str, optional): Language code to translate into. Defaults to 'ru'.
+        batch_size (int, optional): Batch size for API calls. Defaults to 50.
+        splits (List[str], optional):
+            List of splits to translate. Defaults to ['train', 'test', 'valid'].
+
+    Returns:
+        None: Saves translated CSV files for each split.
+    """
+    if splits is None:
+        splits = ["train", "test", "valid"]
+
+    for split in splits:
+        ds = dataset[split]
+
+        def translate_batch_fn(batch: dict) -> dict:
+            originals = batch["tweet_cleaned"]
+            batch_translated = batch_translate(
+                originals, target_lang=target_lang, batch_size=batch_size
+            )
+            return {"translated_tweet": batch_translated}
+
+        translated_ds = ds.map(translate_batch_fn, batched=True, batch_size=batch_size)
+        df = translated_ds.to_pandas()
+        df.to_csv(f"{split}_translated.csv", index=False)
+
+
+def clean_tweets(data_dir: str, file_name: str) -> None:
+    """
+    Load tweets from a CSV,
+    clean mentions and line breaks, remap classes, and save to a new CSV.
+
+    Args:
+        data_dir (str): Directory containing the input file.
+        file_name (str): Name of the CSV file with raw tweets.
+
+    Returns:
+        None: Writes 'cleaned_tweets.csv' in the same directory.
+    """
+    input_path = os.path.join(data_dir, file_name)
+    df = pd.read_csv(input_path)
+    df["tweet_cleaned"] = (
+        df["tweet"]
+        .str.replace(r"@[A-Za-z0-9]+\s*", "", regex=True)
+        .str.replace(r"\s+", " ", regex=True)
+        .str.strip()
+    )
+    df["class"] = df["class"].map({0: 0, 1: 0, 2: 1})
+    output_path = os.path.join(data_dir, "cleaned_tweets.csv")
+    df.to_csv(output_path, index=False)
+
+
+def load_dataset(data_dir: str, file_name: str) -> DatasetDict:
+    """
+    Load tweets from a CSV file,
+    create a DatasetDict from it, and split into train, test, and valid.
+
+    Args:
+        data_dir (str): Directory containing the CSV file.
+        file_name (str): Name of the CSV file with tweets.
+
+    Returns:
+        DatasetDict: A dictionary of datasets for train, test, and valid splits.
+    """
+    df = pd.read_csv(os.path.join(data_dir, file_name))
+    ds = Dataset.from_pandas(df)
+    train_test_valid = ds.train_test_split(test_size=0.2)
+    test_valid = train_test_valid["test"].train_test_split()
+    train_test_valid_dataset = DatasetDict(
+        {
+            "train": train_test_valid["train"],
+            "test": test_valid["test"],
+            "valid": test_valid["train"],
+        }
+    )
+    dataset = train_test_valid_dataset.remove_columns(
+        ["hate_speech_count", "offensive_language_count", "neither_count", "count"]
+    )
+    return dataset
+
+
 def classifier_train(cfg: DictConfig):
+    """
+    Train a sequence classification model
+    """
     os.environ["WANDB_PROJECT"] = cfg.wandb.project
     wb_token = WANDB_API
     wandb.login(key=wb_token)
@@ -168,9 +334,24 @@ def classifier_train(cfg: DictConfig):
         anonymous="allow",
     )
 
-    with open(cfg.data.data_path, "r", encoding="utf-8") as f:
-        raw_data = json.load(f)
-    data = [{"text": item[0], "label": item[1]} for item in raw_data]
+    file_path = cfg.data.data_path
+    file_extension = os.path.splitext(file_path)[1].lower()
+
+    if file_extension == ".json":
+        with open(file_path, "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
+            data = [{"text": item[0], "label": item[1]} for item in raw_data]
+    elif file_extension == ".csv":
+        raw_data = pd.read_csv(file_path, encoding="utf-8")
+        data = [
+            {"text": row["tweet_cleaned"], "label": row["class"]}
+            for _, row in raw_data.iterrows()
+        ]
+    else:
+        raise ValueError(
+            f"Unsupported file format: {file_extension}. Only .json and .csv are supported"
+        )
+
     full_dataset = Dataset.from_list(data)
     class_proportions = sum(full_dataset["label"]) / len(full_dataset["label"])
     logging.info("Class Proportions: %s", class_proportions)
@@ -180,7 +361,7 @@ def classifier_train(cfg: DictConfig):
     train_dataset = split_dataset["train"]
     eval_dataset = split_dataset["test"]
 
-    tokenizer = AutoTokenizer.from_pretrained("intfloat/multilingual-e5-large-instruct")
+    tokenizer = AutoTokenizer.from_pretrained(cfg.model.model_name_or_path)
     model = AutoModelForSequenceClassification.from_pretrained(
         cfg.model.model_name_or_path, num_labels=cfg.model.num_labels
     )
@@ -219,13 +400,14 @@ def classifier_train(cfg: DictConfig):
             "f1": f1_score(labels, predictions, average="weighted"),
         }
 
+    time_start = time.time()
     training_args = TrainingArguments(
         output_dir=cfg.training.output_dir,
         num_train_epochs=cfg.training.num_train_epochs,
         per_device_train_batch_size=cfg.training.per_device_train_batch_size,
         per_device_eval_batch_size=cfg.training.per_device_eval_batch_size,
         gradient_accumulation_steps=cfg.training.gradient_accumulation_steps,
-        eval_strategy=cfg.training.evaluation_strategy,
+        # eval_strategy=cfg.training.evaluation_strategy,
         eval_steps=cfg.training.eval_steps
         if cfg.training.evaluation_strategy == "steps"
         else None,
@@ -244,6 +426,7 @@ def classifier_train(cfg: DictConfig):
     )
 
     trainer.train()
+    logging.info("Training Time: %s", time.time() - time_start)
     results = trainer.evaluate()
     logging.info("Evaluation Results: %s", results)
     trainer.save_model(cfg.training.output_dir)
@@ -265,6 +448,34 @@ def classifier_train(cfg: DictConfig):
         outputs = model(**inputs)
         prediction = outputs.logits.argmax(dim=-1).item()
     logging.info(f"Sample Prediction for '{test_text}': {prediction}")
+
+    onnx_path = os.path.join(cfg.training.output_dir, "model.onnx")
+    dummy_inputs = tokenizer(
+        "This is a dummy input for ONNX export",
+        return_tensors="pt",
+        max_length=cfg.tokenizer.max_length,
+        padding="max_length",
+    )
+    torch.onnx.export(
+        model,
+        (dummy_inputs["input_ids"], dummy_inputs["attention_mask"]),
+        onnx_path,
+        input_names=["input_ids", "attention_mask"],
+        output_names=["logits"],
+        opset_version=cfg.onnx.opset_version,
+    )
+
+    downgraded = os.path.join(cfg.training.output_dir, "model_downgraded.onnx")
+    model_onnx = onnx.load(onnx_path)
+    model_onnx.ir_version = cfg.onnx.target_ir_version
+    for imp in model_onnx.opset_import:
+        if imp.domain in ("", "ai.onnx"):
+            imp.version = cfg.onnx.target_opset_version
+    onnx.checker.check_model(model_onnx)
+    onnx.save(model_onnx, downgraded)
+    logging.info(f"Downgraded ONNX saved to {downgraded}")
+
+    logging.info(f"ONNX model exported to {onnx_path}")
 
     wandb.finish()
 

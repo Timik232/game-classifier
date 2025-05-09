@@ -1,7 +1,10 @@
 from .classifier_train import (
     classifier_train,
+    clean_tweets,
+    load_dataset,
     test_llm_classifier,
     test_trained_classifier,
+    translate_dataset,
 )
 from .logging_config import configure_logging
 from .test import full_test
@@ -33,4 +36,7 @@ __all__ = [
     "classifier_train",
     "test_trained_classifier",
     "test_llm_classifier",
+    "clean_tweets",
+    "translate_dataset",
+    "load_dataset",
 ]

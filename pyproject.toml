@@ -19,6 +19,9 @@ wandb = "^0.19.8"
 torch = {version = "^2.6.0+cu118", source = "torch-cuda"}
 torchvision = {version = "^0.21.0+cu118", source = "torch-cuda"}
 accelerate = "^1.4.0"
+openai = "^1.78.0"
+tenacity = "^9.1.2"
+onnx = "^1.17.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.10.0"

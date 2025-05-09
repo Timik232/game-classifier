@@ -1,6 +1,8 @@
 """
 Utils, constants, prompts
 """
+LMSTUDIO_URL = "http://localhost:1234/v1"
+MODEL_NAME = "gemma-3-1b-it"
 # prompts
 RELATION_PROMPT = (
     "Есть сообщение пользователя. Думай по шагам и оцени, что пользователь "
