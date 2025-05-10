@@ -1,0 +1,373 @@
+import logging
+import time
+
+import pandas as pd
+import requests
+
+from .test_from_file import load_data
+from .utils import (
+    BASE_URL_LLM,
+    BASE_URL_MAIN,
+    CHECK_DND_RELATION,
+    DND_TOPIC_CLASS,
+    REQUEST_TIMEOUT,
+    TEST_DELAY,
+)
+
+
+def log_test_start(func):
+    """Decorator to log test start/end with timing"""
+
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        logging.info(f"Starting test: {func.__name__}")
+        result = func(*args, **kwargs)
+        logging.info(
+            f"Completed test: {func.__name__} in {time.time() - start_time:.2f}s"
+        )
+        return result
+
+    return wrapper
+
+
+def make_request(
+    url: str, method: str = "GET", payload: dict = None
+) -> requests.Response:
+    """Helper function to handle HTTP requests with error handling"""
+    try:
+        if method == "POST":
+            response = requests.post(url, json=payload, timeout=REQUEST_TIMEOUT)
+        else:
+            response = requests.get(url, timeout=REQUEST_TIMEOUT)
+
+        response.raise_for_status()
+        logging.debug(f"Response: {response.json()}")
+        return response
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Request failed to {url}: {str(e)}")
+        if hasattr(e, "response") and e.response is not None:
+            logging.error(f"Response content: {e.response.text}")
+        raise
+
+
+@log_test_start
+def test_root():
+    """Test if the main server is responding"""
+    response = make_request(f"{BASE_URL_MAIN}/")
+    assert response.status_code == 200, "Unexpected status code"
+    assert "message" in response.json(), "Missing 'message' in response"
+    logging.info("Main server is operational")
+
+
+@log_test_start
+def test_another_app():
+    """Test if the LLM server is available"""
+    response = make_request(f"{BASE_URL_LLM}/")
+    assert response.status_code == 200, "Unexpected status code"
+    assert "message" in response.json(), "Missing 'message' in response"
+    logging.info("LLM server is operational")
+
+
+@log_test_start
+def test_check_dnd_relation():
+    """Test DND relation detection endpoint"""
+    payload = {"messages": "Я люблю ДНД!"}
+    response = make_request(CHECK_DND_RELATION, "POST", payload)
+
+    assert "related_to_dnd" in response.json(), "Missing classification field"
+    logging.debug("DND relation check response: %s", response.json())
+    logging.info("DND relation detection working")
+
+
+@log_test_start
+def test_get_dnd_topic_class():
+    """Test topic classification for class-related queries"""
+    payload = {"messages": "Расскажи про класс воина"}
+
+    # First verify the message is DND-related
+    relation_response = make_request(CHECK_DND_RELATION, "POST", payload)
+    assert (
+        relation_response.json()["related_to_dnd"] is True
+    ), "Message should be DND-related"
+
+    # Then test topic classification
+    class_response = make_request(DND_TOPIC_CLASS, "POST", payload)
+    assert "topic_class" in class_response.json(), "Missing topic classification"
+    assert (
+        class_response.json()["topic_class"] == "classes"
+    ), "Unexpected topic classification"
+    logging.info("Class topic classification working")
+
+
+def _test_topic_case(message: str, expected_topic: str) -> None:
+    """Helper function to test different topic classifications"""
+    payload = {"messages": message}
+
+    # Verify DND relation
+    relation_response = make_request(CHECK_DND_RELATION, "POST", payload)
+    assert (
+        relation_response.json()["related_to_dnd"] is True
+    ), f"Message `{payload['messages']}` should be DND-related"
+
+    # Test topic classification
+    class_response = make_request(DND_TOPIC_CLASS, "POST", payload)
+    assert class_response.status_code == 200, "Unexpected status code"
+    predicted_class = class_response.json().get("topic_class")
+    assert (
+        predicted_class == expected_topic
+    ), f"Expected {expected_topic} classification, get {predicted_class} instead"
+
+
+@log_test_start
+def test_spell_case():
+    """Test spell-related topic classification"""
+    _test_topic_case(
+        "мой маг 5 уровня изучает заклинание огненный шар, расскажи про него", "spell"
+    )
+    logging.info("Spell classification working")
+
+
+@log_test_start
+def test_race_case():
+    """Test race-related topic classification"""
+    _test_topic_case("дварф", "race")
+    logging.info("Race classification working")
+
+
+@log_test_start
+def test_mechanics_case():
+    """Test game mechanics classification"""
+    _test_topic_case("Как работает проверка ловкости?", "mechanics")
+    logging.info("Mechanics classification working")
+
+
+@log_test_start
+def test_barbarian_case():
+    """Test class classification"""
+    _test_topic_case("почему варвары такие злые?", "classes")
+    logging.info("Class classification working")
+
+
+@log_test_start
+def test_barbarian2_case():
+    """Test class classification"""
+    _test_topic_case("расскажи мне о характеристиках варвара", "classes")
+    logging.info("Class classification working")
+
+
+@log_test_start
+def test_unicorn_case():
+    """Test bestiary classification"""
+    _test_topic_case("сколько весит единорог?", "bestiary")
+    logging.info("Bestiary classification working")
+
+
+@log_test_start
+def test_checking_characteristic_case():
+    """Test game mechanics classification"""
+    _test_topic_case(
+        "Что такое 'проверка характеристики' и как она проводится?", "mechanics"
+    )
+    logging.info("Mechanics classification working")
+
+
+@log_test_start
+def test_magic_item_case():
+    """Test magic item classification"""
+    _test_topic_case("Расскажи про кольцо оратора", "item,inventory")
+    logging.info("Magic item classification working")
+
+
+@log_test_start
+def test_magic_potion_case():
+    """Test magic item classification"""
+    _test_topic_case("зелье лечения", "item,inventory")
+    logging.info("Magic potion classification working")
+
+
+@log_test_start
+def test_magic_armor_case():
+    """Test magic armor classification"""
+    _test_topic_case("Расскажи про доспех антимагии", "item,inventory")
+    logging.info("Magic armor classification working")
+
+
+@log_test_start
+def test_spell_bless_case():
+    """Test spell classification"""
+    _test_topic_case("Расскажи про благословение", "spell")
+    logging.info("Spell classification working")
+
+
+@log_test_start
+def test_feats_case():
+    """test feats classification"""
+    _test_topic_case("расскажи про черту убийца магов", "feats")
+    logging.info("Feats classification working")
+
+
+@log_test_start
+def test_feats_without_metion_case():
+    """test feats classification"""
+    _test_topic_case("как работает атлетичный?", "feats")
+    logging.info("Feats classification working")
+
+
+@log_test_start
+def test_backgrounds_case():
+    """test backgrounds classification"""
+    _test_topic_case("расскажи про предысторию шарлатан", "backgrounds")
+    logging.info("Backgrounds classification working")
+
+
+@log_test_start
+def test_hard_backgrounds_case():
+    """test backgrounds classification"""
+    _test_topic_case("расскажи, в чём суть гильдейского ремесленника", "backgrounds")
+    logging.info("Backgrounds classification working")
+
+
+@log_test_start
+def test_inventory_case():
+    """test inventory classification"""
+    _test_topic_case("расскажи про безделушки", "item,inventory")
+    logging.info("Inventory classification working")
+
+
+@log_test_start
+def test_lore_case():
+    """test lore classification"""
+    _test_topic_case("какие есть боги в мире днд?", "lore")
+    logging.info("Lore classification working")
+
+
+@log_test_start
+def test_race2_case():
+    """test race classification"""
+    _test_topic_case("напиши про драконорождённого", "race")
+    logging.info("Race classification working")
+
+
+@log_test_start
+def test_race3_case():
+    """test race classification"""
+    _test_topic_case("что даёт персонажу выбор человека?", "race")
+    logging.info("Race classification working")
+
+
+@log_test_start
+def test_shovel_case():
+    """test inventory classification"""
+    _test_topic_case("сколько стоит лопата?", "item,inventory")
+    logging.info("Inventory shovel classification working")
+
+
+@log_test_start
+def test_jug_case():
+    """test inventory classification"""
+    _test_topic_case("сколько весит кувшин?", "item,inventory")
+    logging.info("Inventory jug classification working")
+
+
+@log_test_start
+def test_inventory_armor_case():
+    """test inventory classification"""
+    _test_topic_case("чешуйчатый доспех", "item,inventory")
+    logging.info("Inventory armor classification working")
+
+
+@log_test_start
+def test_item_armor_case():
+    """test item classification"""
+    _test_topic_case("адамантиновый доспех", "item,inventory")
+    logging.info("Item armor classification working")
+
+
+@log_test_start
+def test_from_file(test_dataset: pd.DataFrame):
+    """
+    Process tests from a DataFrame with a delay, calculate overall accuracy,
+    and log results.
+    """
+    total_tests = len(test_dataset)
+    passed_tests = 0
+
+    for index, row in test_dataset.iterrows():
+        time.sleep(TEST_DELAY)
+        try:
+            _test_topic_case(row["question"], row["category"])
+            logging.info(f"Test {index} passed")
+            passed_tests += 1
+        except Exception as e:
+            logging.error(f"Test {index} failed: {str(e)}")
+
+    accuracy = (passed_tests / total_tests) * 100 if total_tests > 0 else 0
+    logging.info("Test from file working")
+    logging.info(f"Accuracy: {accuracy:.1f}%")
+
+
+def full_test():
+    """Execute all tests with proper sequencing and reporting"""
+    logging.info("Starting comprehensive test suite")
+
+    tests = [
+        test_root,
+        test_another_app,
+        test_check_dnd_relation,
+        test_get_dnd_topic_class,
+        test_spell_case,
+        test_race_case,
+        test_mechanics_case,
+        test_barbarian_case,
+        test_barbarian2_case,
+        test_unicorn_case,
+        test_checking_characteristic_case,
+        test_magic_item_case,
+        test_magic_potion_case,
+        test_magic_armor_case,
+        test_spell_bless_case,
+        test_feats_case,
+        test_feats_without_metion_case,
+        test_backgrounds_case,
+        test_hard_backgrounds_case,
+        test_inventory_case,
+        test_lore_case,
+        test_race2_case,
+        test_race3_case,
+        test_shovel_case,
+        test_jug_case,
+        test_inventory_armor_case,
+        test_item_armor_case,
+    ]
+
+    results = {"passed": 0, "failed": 0, "errors": []}
+
+    for test in tests:
+        try:
+            test()
+            time.sleep(TEST_DELAY)
+            results["passed"] += 1
+        except AssertionError as e:
+            logging.error(f"Test failed: {test.__name__} - {str(e)}")
+            results["failed"] += 1
+            results["errors"].append((test.__name__, str(e)))
+        except Exception as e:
+            logging.error(f"Unexpected error in {test.__name__}: {str(e)}")
+            results["failed"] += 1
+            results["errors"].append((test.__name__, str(e)))
+    train_dataset, test_dataset = load_data()
+    test_dataset = test_dataset.reset_index(drop=True)
+    test_from_file(test_dataset)
+
+    logging.info("\n=== Test Summary ===")
+    logging.info(f"Total tests: {len(tests)}")
+    logging.info(f"Passed: {results['passed']}")
+    logging.info(f"Failed: {results['failed']}")
+
+    if results["errors"]:
+        logging.info("\nError Details:")
+        for test_name, error in results["errors"]:
+            logging.info(f"- {test_name}: {error}")
+
+    logging.info(f"Success rate: {results['passed'] / len(tests) * 100:.1f}%.")
