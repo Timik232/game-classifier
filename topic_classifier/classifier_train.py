@@ -289,6 +289,7 @@ def clean_tweets(data_dir: str, file_name: str) -> None:
         .str.strip()
     )
     df["class"] = df["class"].map({0: 0, 1: 0, 2: 1})
+    df = df[["tweet_cleaned", "class"]]
     output_path = os.path.join(data_dir, "cleaned_tweets.csv")
     df.to_csv(output_path, index=False)
 
@@ -316,10 +317,7 @@ def load_dataset(data_dir: str, file_name: str) -> DatasetDict:
             "valid": test_valid["train"],
         }
     )
-    dataset = train_test_valid_dataset.remove_columns(
-        ["hate_speech_count", "offensive_language_count", "neither_count", "count"]
-    )
-    return dataset
+    return train_test_valid_dataset
 
 
 def load_training_dataset(file_path: str, file_extension: str) -> List[Dict[str, Any]]:
@@ -482,7 +480,7 @@ def classifier_train(cfg: DictConfig):
 
 def test_trained_classifier(cfg: DictConfig, steps=720):
     model = AutoModelForSequenceClassification.from_pretrained(
-        os.path.join(cfg.training.output_dir, f"checkpoint-{steps}")
+        os.path.join(cfg.training.output_dir)
     )
     tokenizer = AutoTokenizer.from_pretrained(
         os.path.join(cfg.training.output_dir, "tokenizer")

@@ -4,11 +4,14 @@ from .classifier_train import (
     load_dataset,
     test_llm_classifier,
     test_trained_classifier,
-    translate_dataset,
 )
+
+# translate_dataset,
 from .logging_config import configure_logging
+from .onnx_convert import export_model_to_onnx
 from .test import full_test
 from .test_from_file import create_dataset, load_data
+from .translate import translate_dataset
 from .utils import (
     BASE_URL_LLM,
     BASE_URL_MAIN,
@@ -39,4 +42,5 @@ __all__ = [
     "clean_tweets",
     "translate_dataset",
     "load_dataset",
+    "export_model_to_onnx",
 ]
